@@ -2,6 +2,7 @@
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import RedirectResponse, HTMLResponse
 from fastapi.templating import Jinja2Templates
+from starlette.middleware.sessions import SessionMiddleware
 from pydantic import BaseModel
 import requests
 import os
@@ -19,16 +20,20 @@ app = FastAPI(
     version="2.0.0"
 )
 
+# Add session middleware for OAuth
+app.add_middleware(SessionMiddleware, secret_key=secrets.token_urlsafe(32))
+
 # templates
 templates = Jinja2Templates(directory="templates")
 
-# Github OAuth
+# Configure OAuth
 oauth = OAuth()
 oauth.register(
     name='github',
     client_id=os.getenv('GITHUB_CLIENT_ID'),
     client_secret=os.getenv('GITHUB_CLIENT_SECRET'),
-    server_metadata_url='https://api.github.com/.well-known/openid_configuration',
+    authorize_url='https://github.com/login/oauth/authorize',
+    access_token_url='https://github.com/login/oauth/access_token',
     client_kwargs={
         'scope': 'user:email repo'
     }
@@ -72,7 +77,7 @@ async def home(request: Request):
         <body style="font-family: Arial; padding: 40px; text-align: center;">
             <h1>🔍 GitHub Repository Analyzer</h1>
             <p>Authenticate with GitHub to analyze your repositories</p>
-            <a href="/login" style="background: #28a745; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px;">
+            <a href="/login/github" style="background: #28a745; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px;">
                 Login with GitHub
             </a>
             <br><br>
@@ -86,11 +91,15 @@ async def login(request: Request):
     redirect_uri = request.url_for('auth_callback')
     return await oauth.github.authorize_redirect(request, redirect_uri)
 
-@app.get("/github/callback")
+@app.get("/callback")
 async def auth_callback(request: Request):
     try:
         token = await oauth.github.authorize_access_token(request)
-        user_info = token.get('userinfo')
+        
+        # Get user info from GitHub API
+        headers = {'Authorization': f'token {token["access_token"]}'}
+        user_response = requests.get('https://api.github.com/user', headers=headers)
+        user_info = user_response.json() if user_response.status_code == 200 else None
         
         if user_info:
             # sessions
