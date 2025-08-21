@@ -231,9 +231,9 @@ def parse_ai_response(ai_text: str) -> Dict[str, Any]:
                 suggestions = [s.strip() for s in suggestions_text.split('|')]
         
         return {
-            "score": max(0.0, min(1.0, score)),  # Keep between 0 and 1
+            "score": max(0.0, min(1.0, score)),  # 0 to 1
             "explanation": explanation,
-            "suggestions": suggestions[:3]  # Max 3 suggestions
+            "suggestions": suggestions[:3]
         }
         
     except:
