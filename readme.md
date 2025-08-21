@@ -1,34 +1,25 @@
-# Super Simple GitHub Repository Analyzer
+# GitHub Repository Analyzer
 
-**Perfect for entry-level developers!** This code is easy to understand and explain.
-
-## What This Does
+## Key Features
 
 1. **Takes input**: GitHub URL + assignment description
 2. **Gets repository info**: Uses GitHub API to get basic details
 3. **Analyzes with AI**: Uses Google Gemini to check if code matches assignment
 4. **Returns results**: Score, explanation, and suggestions
 
-## Files Explained
-
-- `simple_main.py` - Main application (only 150 lines!)
-- `simple_test.py` - Test script to try it out
-- `requirements.txt` - What packages we need
-- `.env` - Your API keys (keep secret!)
-
-## How to Run
+## Execution
 
 1. **Install packages**:
    ```
    pip install -r requirements.txt
    ```
 
-2. **Start the server**:
+2. **Starting the server**:
    ```
    python simple_main.py
    ```
 
-3. **Test it**:
+3. **Testing**:
    ```
    python simple_test.py
    ```
@@ -37,7 +28,7 @@
    - Open: http://localhost:8080/docs
    - Try the `/analyze` endpoint
 
-## Code Structure (Easy to Explain!)
+## Code Structure
 
 ### Main Functions:
 
@@ -70,15 +61,7 @@ GitHub URL → Extract repo name → Get repo info → Download code → Ask AI 
 }
 ```
 
-## Key Benefits for Beginners
-
-- **Single file**: Everything in one place
-- **Clear functions**: Each function does one thing
-- **Lots of comments**: Every step explained
-- **Simple logic**: No complex patterns or frameworks
-- **Easy to modify**: Change one function at a time
-
-## What Each Function Does
+## Functionalities
 
 | Function | Purpose | Input | Output |
 |----------|---------|-------|--------|
@@ -86,12 +69,3 @@ GitHub URL → Extract repo name → Get repo info → Download code → Ask AI 
 | `get_repo_name()` | Extract repo name | GitHub URL | "user/repo" |
 | `get_repo_info()` | Get repo details | Repo name | Repo information |
 | `ask_ai_to_analyze()` | AI analysis | Repo info + assignment | AI response |
-
-## Perfect for Explaining to Seniors
-
-1. **"We take a GitHub URL"** - Easy to understand
-2. **"We call GitHub's API"** - Standard web request
-3. **"We ask AI to analyze"** - Simple AI integration
-4. **"We return structured results"** - Clean output
-
-No complex frameworks, no fancy patterns - just simple, working code!
