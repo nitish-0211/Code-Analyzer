@@ -81,12 +81,12 @@ async def home(request: Request):
     </html>
     """)
 
-@app.get("/login")
+@app.get("/login/github")
 async def login(request: Request):
     redirect_uri = request.url_for('auth_callback')
     return await oauth.github.authorize_redirect(request, redirect_uri)
 
-@app.get("/callback")
+@app.get("/github/callback")
 async def auth_callback(request: Request):
     try:
         token = await oauth.github.authorize_access_token(request)

@@ -1,8 +1,3 @@
-"""
-Simple test to verify OAuth setup
-Run this after setting up GitHub OAuth credentials
-"""
-
 import os
 from dotenv import load_dotenv
 
