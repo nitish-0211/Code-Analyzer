@@ -266,26 +266,25 @@ def get_repository_info(repo_full_name: str, access_token: str) -> Dict[str, Any
     languages_response = requests.get(languages_url, headers=headers)
     languages = list(languages_response.json().keys()) if languages_response.status_code == 200 else []
     
-    # Get commit count (limit to avoid rate limits)
+    # commit counts
     commits_url = f"https://api.github.com/repos/{repo_full_name}/commits?per_page=100"
     commits_response = requests.get(commits_url, headers=headers)
     if commits_response.status_code == 200:
         commits_data = commits_response.json()
         total_commits = len(commits_data)
-        # If we got 100 commits, there might be more - use repo stats
         if total_commits == 100:
-            total_commits = repo_data.get("size", 0) // 10  # Rough estimate
+            total_commits = repo_data.get("size", 0) // 10
     else:
         total_commits = 0
     
-    # Get contributors
+    # contributors
     contributors_url = f"https://api.github.com/repos/{repo_full_name}/contributors"
     contributors_response = requests.get(contributors_url, headers=headers)
     if contributors_response.status_code == 200:
         contributors_data = contributors_response.json()
         contributors = len(contributors_data) if isinstance(contributors_data, list) else 1
     else:
-        contributors = 1  # Assume at least the owner
+        contributors = 1  
     
     return {
         "name": repo_data["name"],
