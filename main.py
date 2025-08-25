@@ -1,16 +1,18 @@
-
-from fastapi import FastAPI, HTTPException, Request
-from fastapi.responses import RedirectResponse, HTMLResponse
-from fastapi.templating import Jinja2Templates
-from starlette.middleware.sessions import SessionMiddleware
-from pydantic import BaseModel
-import requests
 import os
-from typing import List, Dict, Any, Optional
-from dotenv import load_dotenv
-import google.generativeai as genai
-from authlib.integrations.starlette_client import OAuth
 import secrets
+from typing import List, Dict, Any, Optional
+from fastapi import FastAPI, Request, HTTPException
+from fastapi.responses import HTMLResponse, RedirectResponse
+from pydantic import BaseModel
+from authlib.integrations.starlette_client import OAuth
+from starlette.middleware.sessions import SessionMiddleware
+from dotenv import load_dotenv
+import requests
+
+# Import our custom modules
+from github_api import get_user_repositories, get_repository_info, get_code_files
+from ai_detection import detect_ai_generated_code
+from analysis import analyze_with_ai
 
 load_dotenv()
 
@@ -21,9 +23,6 @@ app = FastAPI(
 )
 
 app.add_middleware(SessionMiddleware, secret_key=secrets.token_urlsafe(32))
-
-# templates
-templates = Jinja2Templates(directory="templates")
 
 # OAuth configuration
 oauth = OAuth()
@@ -37,9 +36,6 @@ oauth.register(
         'scope': 'user:email repo'
     }
 )
-
-genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
-model = genai.GenerativeModel('gemini-1.5-flash')
 
 user_sessions = {}
 
@@ -65,6 +61,8 @@ class AnalyzeResponse(BaseModel):
     suggestions: List[str]
     total_commits: int
     contributors: int
+    ai_detection_score: float  # 0.0 = likely human, 1.0 = likely AI
+    ai_detection_details: Dict[str, Any]
 
 # OAUTH ENDPOINTS
 
@@ -198,227 +196,27 @@ async def analyze_repository(request: Request):
         repo_info = get_repository_info(repo_full_name, access_token)
         code_files = get_code_files(repo_full_name, access_token)
         
+        # AI vs Human Detection
+        ai_detection = detect_ai_generated_code(code_files, repo_info)
+        
         # AI-Analysis
-        ai_analysis = analyze_with_ai(
-            assignment_description=assignment_description,
-            repo_info=repo_info,
-            code_files=code_files
-        )
+        ai_analysis = analyze_with_ai(code_files, repo_info, assignment_description)
         
         return AnalyzeResponse(
             repository_name=repo_full_name,
-            languages_found=repo_info["languages"],
-            assignment_match_score=ai_analysis["score"],
+            languages_found=ai_analysis["languages_found"],
+            assignment_match_score=ai_analysis["assignment_match_score"],
             explanation=ai_analysis["explanation"],
             suggestions=ai_analysis["suggestions"],
             total_commits=repo_info["total_commits"],
-            contributors=repo_info["contributors"]
+            contributors=repo_info["contributors"],
+            ai_detection_score=ai_detection["score"],
+            ai_detection_details=ai_detection["details"]
         )
         
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Error: {str(e)}")
 
-# FUNCTIONS
-
-def get_user_repositories(access_token: str) -> List[Dict]:
-    headers = {
-        'Authorization': f'token {access_token}',
-        'Accept': 'application/vnd.github.v3+json'
-    }
-    
-    response = requests.get('https://api.github.com/user/repos', headers=headers)
-    
-    if response.status_code != 200:
-        raise Exception(f"Failed to fetch repositories: {response.status_code}")
-    
-    repos = response.json()
-    
-    return [{
-        'name': repo['name'],
-        'full_name': repo['full_name'],
-        'description': repo['description'],
-        'language': repo['language'],
-        'private': repo['private'],
-        'updated_at': repo['updated_at'],
-        'html_url': repo['html_url']
-    } for repo in repos]
-
-# Repo Info
-
-def get_repository_info(repo_full_name: str, access_token: str) -> Dict[str, Any]:
-    headers = {
-        'Authorization': f'token {access_token}',
-        'Accept': 'application/vnd.github.v3+json'
-    }
-    
-    repo_url = f"https://api.github.com/repos/{repo_full_name}"
-    response = requests.get(repo_url, headers=headers)
-    
-    if response.status_code == 404:
-        raise Exception(f"Repository {repo_full_name} not found")
-    elif response.status_code != 200:
-        raise Exception(f"Failed to access repository: {response.status_code}")
-    
-    repo_data = response.json()
-    
-    # check programming languages
-    languages_url = f"https://api.github.com/repos/{repo_full_name}/languages"
-    languages_response = requests.get(languages_url, headers=headers)
-    languages = list(languages_response.json().keys()) if languages_response.status_code == 200 else []
-    
-    # commit counts
-    commits_url = f"https://api.github.com/repos/{repo_full_name}/commits?per_page=100"
-    commits_response = requests.get(commits_url, headers=headers)
-    if commits_response.status_code == 200:
-        commits_data = commits_response.json()
-        total_commits = len(commits_data)
-        if total_commits == 100:
-            total_commits = repo_data.get("size", 0) // 10
-    else:
-        total_commits = 0
-    
-    # contributors
-    contributors_url = f"https://api.github.com/repos/{repo_full_name}/contributors"
-    contributors_response = requests.get(contributors_url, headers=headers)
-    if contributors_response.status_code == 200:
-        contributors_data = contributors_response.json()
-        contributors = len(contributors_data) if isinstance(contributors_data, list) else 1
-    else:
-        contributors = 1  
-    
-    return {
-        "name": repo_data["name"],
-        "description": repo_data.get("description", "No description"),
-        "languages": languages,
-        "size": repo_data["size"],
-        "stars": repo_data["stargazers_count"],
-        "total_commits": total_commits,
-        "contributors": contributors
-    }
-
-def get_code_files(repo_full_name: str, access_token: str, max_files: int = 5) -> List[Dict[str, str]]:
-    headers = {
-        'Authorization': f'token {access_token}',
-        'Accept': 'application/vnd.github.v3+json'
-    }
-    
-    contents_url = f"https://api.github.com/repos/{repo_full_name}/contents"
-    response = requests.get(contents_url, headers=headers)
-    
-    if response.status_code != 200:
-        return []
-    
-    files_data = response.json()
-    code_files = []
-    
-    important_extensions = ['.py', '.js', '.java', '.cpp', '.c', '.md', '.txt']
-    
-    for file_info in files_data[:max_files]:
-        if file_info["type"] == "file":
-            file_name = file_info["name"]
-            
-            if any(file_name.endswith(ext) for ext in important_extensions):
-                file_content = download_file_content(file_info["download_url"], access_token)
-                
-                if file_content:
-                    code_files.append({
-                        "name": file_name,
-                        "content": file_content[:2000]
-                    })
-    
-    return code_files
-
-def download_file_content(download_url: str, access_token: str) -> str:
-    try:
-        headers = {
-            'Authorization': f'token {access_token}',
-            'Accept': 'application/vnd.github.v3+json'
-        }
-        response = requests.get(download_url, headers=headers)
-        if response.status_code == 200:
-            return response.text
-    except:
-        pass
-    return ""
-
-# AI ANALYSIS
-
-def analyze_with_ai(assignment_description: str, repo_info: Dict, code_files: List[Dict]) -> Dict[str, Any]:
-
-    prompt = f"""
-    Analyze this GitHub repository to see if it matches the given assignment.
-    
-    ASSIGNMENT:
-    {assignment_description}
-    
-    REPOSITORY INFO:
-    - Name: {repo_info['name']}
-    - Description: {repo_info['description']}
-    - Languages: {', '.join(repo_info['languages'])}
-    - Size: {repo_info['size']} KB
-    
-    CODE FILES:
-    """
-
-    for file in code_files:
-        prompt += f"\n--- {file['name']} ---\n{file['content']}\n"
-    
-    prompt += """
-    
-    Please analyze and provide:
-    1. Score from 0.0 to 1.0 (how well does it match?)
-    2. Clear explanation
-    3. 3 specific suggestions for improvement
-    
-    Format your response as:
-    SCORE: [number]
-    EXPLANATION: [your analysis]
-    SUGGESTIONS: [suggestion 1] | [suggestion 2] | [suggestion 3]
-    """
-    
-    try:
-        response = model.generate_content(prompt)
-        return parse_ai_response(response.text)
-        
-    except Exception as e:
-        return {
-            "score": 0.5,
-            "explanation": f"AI analysis unavailable: {str(e)}",
-            "suggestions": ["Review code structure", "Add documentation", "Test functionality"]
-        }
-
-# AI Response
-
-def parse_ai_response(ai_text: str) -> Dict[str, Any]:
-    try:
-        lines = ai_text.split('\n')
-        score = 0.5
-        explanation = "Analysis completed"
-        suggestions = []
-        
-        for line in lines:
-            line = line.strip()
-            if line.startswith('SCORE:'):
-                score_text = line.replace('SCORE:', '').strip()
-                score = float(score_text)
-            elif line.startswith('EXPLANATION:'):
-                explanation = line.replace('EXPLANATION:', '').strip()
-            elif line.startswith('SUGGESTIONS:'):
-                suggestions_text = line.replace('SUGGESTIONS:', '').strip()
-                suggestions = [s.strip() for s in suggestions_text.split('|')]
-        
-        return {
-            "score": max(0.0, min(1.0, score)),  # 0 to 1
-            "explanation": explanation,
-            "suggestions": suggestions[:3]
-        }
-        
-    except:
-        return {
-            "score": 0.5,
-            "explanation": "Could not parse AI response",
-            "suggestions": ["Review requirements", "Improve code quality", "Add tests"]
-        }
 
 
 if __name__ == "__main__":
