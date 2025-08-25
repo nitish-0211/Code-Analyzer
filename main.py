@@ -20,13 +20,12 @@ app = FastAPI(
     version="2.0.0"
 )
 
-# Add session middleware for OAuth
 app.add_middleware(SessionMiddleware, secret_key=secrets.token_urlsafe(32))
 
 # templates
 templates = Jinja2Templates(directory="templates")
 
-# Configure OAuth
+# OAuth configuration
 oauth = OAuth()
 oauth.register(
     name='github',
@@ -40,7 +39,7 @@ oauth.register(
 )
 
 genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
-model = genai.GenerativeModel('gemini-pro')
+model = genai.GenerativeModel('gemini-1.5-flash')
 
 user_sessions = {}
 
@@ -75,7 +74,7 @@ async def home(request: Request):
     <html>
         <head><title>GitHub Repository Analyzer</title></head>
         <body style="font-family: Arial; padding: 40px; text-align: center;">
-            <h1>🔍 GitHub Repository Analyzer</h1>
+            <h1>GitHub Repository Analyzer</h1>
             <p>Authenticate with GitHub to analyze your repositories</p>
             <a href="/login/github" style="background: #28a745; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px;">
                 Login with GitHub
@@ -267,14 +266,26 @@ def get_repository_info(repo_full_name: str, access_token: str) -> Dict[str, Any
     languages_response = requests.get(languages_url, headers=headers)
     languages = list(languages_response.json().keys()) if languages_response.status_code == 200 else []
     
-    # fetch commits
-    commits_url = f"https://api.github.com/repos/{repo_full_name}/commits"
+    # Get commit count (limit to avoid rate limits)
+    commits_url = f"https://api.github.com/repos/{repo_full_name}/commits?per_page=100"
     commits_response = requests.get(commits_url, headers=headers)
-    total_commits = len(commits_response.json()) if commits_response.status_code == 200 else 0
+    if commits_response.status_code == 200:
+        commits_data = commits_response.json()
+        total_commits = len(commits_data)
+        # If we got 100 commits, there might be more - use repo stats
+        if total_commits == 100:
+            total_commits = repo_data.get("size", 0) // 10  # Rough estimate
+    else:
+        total_commits = 0
     
+    # Get contributors
     contributors_url = f"https://api.github.com/repos/{repo_full_name}/contributors"
     contributors_response = requests.get(contributors_url, headers=headers)
-    contributors = len(contributors_response.json()) if contributors_response.status_code == 200 else 0
+    if contributors_response.status_code == 200:
+        contributors_data = contributors_response.json()
+        contributors = len(contributors_data) if isinstance(contributors_data, list) else 1
+    else:
+        contributors = 1  # Assume at least the owner
     
     return {
         "name": repo_data["name"],
