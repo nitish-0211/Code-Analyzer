@@ -2,7 +2,7 @@
 
 A comprehensive tool that analyzes GitHub repositories against assignment requirements and detects AI-generated vs human-written code patterns.
 
-## 🚀 Features
+## Features
 
 ### **Core Analysis**
 - **OAuth Authentication**: Secure GitHub login with repository access
@@ -17,42 +17,8 @@ A comprehensive tool that analyzes GitHub repositories against assignment requir
 - **Error Handling**: Comprehensive vs basic error patterns
 - **Repository Metadata**: Commit patterns and descriptions
 
-## 📁 Project Structure
 
-```
-├── main.py              # FastAPI application with OAuth
-├── github_api.py        # GitHub API interactions
-├── ai_detection.py      # AI vs human code detection
-├── analysis.py          # Google Gemini integration
-├── requirements.txt     # Dependencies
-└── README.md           # Documentation
-```
-
-## ⚙️ Setup
-
-### 1. Install Dependencies
-```bash
-pip install -r requirements.txt
-```
-
-### 2. Environment Variables
-Create a `.env` file:
-```env
-GITHUB_CLIENT_ID=your_github_client_id
-GITHUB_CLIENT_SECRET=your_github_client_secret
-GEMINI_API_KEY=your_gemini_api_key
-```
-
-### 3. GitHub OAuth Setup
-1. Go to GitHub Settings → Developer settings → OAuth Apps
-2. Create new OAuth App with callback URL: `http://localhost:8080/callback`
-3. Copy Client ID and Secret to `.env`
-
-### 4. Google Gemini API
-1. Get API key from [Google AI Studio](https://makersuite.google.com/app/apikey)
-2. Add to `.env` file
-
-## 🏃 Running the Application
+## Running the Application
 
 ```bash
 python main.py
@@ -62,7 +28,7 @@ Access the application:
 - **Home**: http://localhost:8080
 - **API Docs**: http://localhost:8080/docs
 
-## 📊 Analysis Output
+## Analysis Output
 
 ```json
 {
@@ -86,13 +52,13 @@ Access the application:
 }
 ```
 
-## 🔍 AI Detection Scoring
+## AI Detection Scoring
 
 - **0.0 - 0.3**: Likely Human-written
 - **0.3 - 0.7**: Mixed/Uncertain  
 - **0.7 - 1.0**: Likely AI-generated
 
-## 🛠️ API Endpoints
+## API Endpoints
 
 | Endpoint | Method | Description |
 |----------|--------|-------------|
@@ -102,14 +68,14 @@ Access the application:
 | `/repositories` | GET | List user repositories |
 | `/analyze` | POST | Analyze repository |
 
-## 🧪 Testing
+## Testing
 
 Test individual components:
 ```bash
 python test_example.py
 ```
 
-## 📋 Dependencies
+## Dependencies
 
 - **FastAPI**: Web framework
 - **Uvicorn**: ASGI server
