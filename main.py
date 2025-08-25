@@ -9,7 +9,6 @@ from starlette.middleware.sessions import SessionMiddleware
 from dotenv import load_dotenv
 import requests
 
-# Import our custom modules
 from github_api import get_user_repositories, get_repository_info, get_code_files
 from ai_detection import detect_ai_generated_code
 from analysis import analyze_with_ai
