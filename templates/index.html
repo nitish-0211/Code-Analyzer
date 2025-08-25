@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GitHub Repository Analyzer</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>GitHub Repository Analyzer</h1>
+            <p>Analyze public repositories against assignment requirements</p>
+        </header>
+
+        <main>
+            <form id="analyzeForm" class="analyzer-form">
+                <div class="form-group">
+                    <label for="repoUrl">GitHub Repository URL:</label>
+                    <input 
+                        type="url" 
+                        id="repoUrl" 
+                        name="repo_url" 
+                        placeholder="https://github.com/username/repository"
+                        required
+                    >
+                </div>
+
+                <div class="form-group">
+                    <label for="assignment">Assignment Description:</label>
+                    <textarea 
+                        id="assignment" 
+                        name="assignment_description" 
+                        rows="5" 
+                        placeholder="Describe what the assignment should accomplish..."
+                        required
+                    ></textarea>
+                </div>
+
+                <button type="submit" class="analyze-btn">
+                    <span class="btn-text">Analyze Repository</span>
+                    <span class="loading" style="display: none;">Analyzing...</span>
+                </button>
+            </form>
+
+            <div id="results" class="results-section" style="display: none;">
+                <h2>Analysis Results</h2>
+                <div id="resultsContent"></div>
+            </div>
+        </main>
+    </div>
+
+    <script src="/static/script.js"></script>
+</body>
+</html>
