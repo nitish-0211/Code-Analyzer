@@ -1,12 +1,10 @@
 from typing import List, Dict, Any
 
+#code pattern analysis to check if code is AI-generated or human-written
+#scoring: 0 human, 1 = AI.
+
 def detect_ai_generated_code(code_files: List[Dict[str, str]], repo_info: Dict) -> Dict[str, Any]:
-    
-    """
-    code pattern analysis to check if code is AI-generated or human-written
-    Returns score: 0 human, 1 = AI.
-    """
-    
+
     if not code_files:
         return {"score": 0.5, "details": {"reason": "No code files to analyze"}}
     

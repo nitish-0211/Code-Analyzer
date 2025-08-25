@@ -196,10 +196,8 @@ async def analyze_repository(request: Request):
         repo_info = get_repository_info(repo_full_name, access_token)
         code_files = get_code_files(repo_full_name, access_token)
         
-        # AI vs Human Detection
         ai_detection = detect_ai_generated_code(code_files, repo_info)
         
-        # AI-Analysis
         ai_analysis = analyze_with_ai(code_files, repo_info, assignment_description)
         
         return AnalyzeResponse(
@@ -216,8 +214,6 @@ async def analyze_repository(request: Request):
         
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Error: {str(e)}")
-
-
 
 if __name__ == "__main__":
     import uvicorn

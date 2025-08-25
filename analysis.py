@@ -1,17 +1,11 @@
-"""
-AI analysis module using Google Gemini
-Handles AI-powered code analysis and assignment matching
-"""
-
 import os
 import google.generativeai as genai
 from typing import List, Dict, Any
 
 
+# repo analysis (Gemini)
 def analyze_with_ai(code_files: List[Dict[str, str]], repo_info: Dict, assignment_description: str) -> Dict[str, Any]:
-    """Analyze repository code using Google Gemini AI"""
     
-    # Configure Gemini
     api_key = os.getenv('GEMINI_API_KEY')
     if not api_key:
         raise Exception("GEMINI_API_KEY not found in environment variables")
@@ -19,12 +13,10 @@ def analyze_with_ai(code_files: List[Dict[str, str]], repo_info: Dict, assignmen
     genai.configure(api_key=api_key)
     model = genai.GenerativeModel('gemini-1.5-flash')
     
-    # Prepare code content for analysis
     code_content = ""
     for file in code_files:
         code_content += f"\n--- {file['name']} ---\n{file['content']}\n"
     
-    # Create analysis prompt
     prompt = f"""
     Analyze this GitHub repository code against the assignment description.
 
@@ -57,12 +49,10 @@ def analyze_with_ai(code_files: List[Dict[str, str]], repo_info: Dict, assignmen
     try:
         response = model.generate_content(prompt)
         
-        # Try to parse JSON response
         import json
         try:
             result = json.loads(response.text)
         except:
-            # If JSON parsing fails, create structured response from text
             result = {
                 "assignment_match_score": 0.7,
                 "explanation": response.text,
@@ -73,7 +63,6 @@ def analyze_with_ai(code_files: List[Dict[str, str]], repo_info: Dict, assignmen
         return result
         
     except Exception as e:
-        # Fallback response if AI analysis fails
         return {
             "assignment_match_score": 0.5,
             "explanation": f"AI analysis failed: {str(e)}. Basic analysis completed based on repository structure.",
